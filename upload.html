@@ -4,12 +4,25 @@
 <title>Reports Portal</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/styles.css"><script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
+<script src="validate.js"></script>
+<!--This script was added before validate.js, remove if validate.js works.
 <script type="text/javascript">
 	$(document).ready(function(){
 		$("#uploadmessage").modal('show');
 	});
-</script>
+</script>-->
+
+<style>
+	.help-black.error {
+	  margin-bottom: 5px;
+	}
+</style>
+	
 </head>
 <body>
 	
@@ -38,6 +51,7 @@
 			<p>Use the forms to upload operational and financial reports for the current fiscal year.</p>
 			</div>
 			<div class="col-sm-5 offset-sm-1 border pt-2"><h3>Upload Operational Reports</h3>
+				<form id="main" class="form-horizontal" action="/example" method="post" novalidate>
 				<label class="custom-file-lable mt-2">File for upload*</label>
 				<div class="input-group mb-3">
 					<div class="custom-file">
@@ -49,9 +63,9 @@
 					</div>
 				</div>
 				<div class="form-group">
-					<label for="sel1div">Reporting Division*</label>
-					<select class="form-control" id="sel1div" required>
-					<option value="select">Select</option>
+					<label for="division">Reporting Division*</label>
+					<select class="form-control" id="division" name="division">
+					<option value=""></option>
 					<option value="adm">ADM Division</option>
 					<option value="hcm">HCM Division</option>
 					<option value="itm">ITM Division</option>
@@ -135,9 +149,11 @@
 						<div class="invalid-feedback">Please choose the content owner's email address.</div>
 					</div>
 				</form>
-				<button class="btn btn-primary" type="submit" data-toggle="modal" data-target="#uploadmessage">Save &amp; Upload Operational Report</button>
+				<button class="btn btn-primary" type="submit">Save &amp; Upload Operational Report</button>
+				</form>
 			</div>
 			<div class="col-sm-5 offset-sm-1 border pt-2"><h3>Upload Financial Reports</h3>
+				<form id="main" class="form-horizontal" action="/example" method="post" novalidate>
 				<label class="custom-file-lable mt-2">File for upload*</label>
 				<div class="input-group mb-3">
 					<div class="custom-file">
@@ -170,16 +186,18 @@
 				</div>
 				<form>
 					<div class="form-group">
-						<label for="exampleInputEmail1">Content Owner's Email Address*</label>
-						<input type="email" class="form-control" id="exampleInputEmail1b" aria-describedby="emailHelp" placeholder="Enter email" required>
+						<label class="control-label" for="email">Content Owner's Email Address*</label>
+						<input id="email" class="form-control" type="email" placeholder="Enter email" name="email" aria-describedby="emailHelp">
+						<div class="col-sm-5 messages"></div>
 					</div>
 				</form>
-				<button class="btn btn-primary" type="submit" data-toggle="modal" data-target="#uploadmessage">Save &amp; Upload Financial Report</button>
+				<button class="btn btn-primary" type="submit">Save &amp; Upload Financial Report</button>
+				</form>
 			</div>
 	</div>
 </div>
 	
-	<!-- Modal -->
+	<!-- Modal from prior to validate.js
 	<div id="uploadmessage" class="modal fade" role="dialog">
 	  <div class="modal-dialog" role="document">
 		<div class="modal-content">
@@ -195,10 +213,99 @@
 		  </div>
 		</div>
 	  </div>
-	</div>
+	</div>  -->
+
+<script>
+	(function() {
+		//contraints on email form
+		var constraints = {
+			email: {
+				// Email is required
+				presence: true,
+				// and must be an email
+				email: true
+			},
+			state: {
+				// You need to input the reporting state
+				presence: true,
+			}
+		};
+		var form = document.querySelector("form#main");
+		form.addEventListener("submit", function(ev) {
+			ev.preventDefault();
+			handleFormSubmit(form);
+		});
+		var inputs = document.querySelectorAll("input, textarea, select")
+		for (var i = 0; i < inputs.length; ++i) {
+			inputs.item(i).addEventListener("change", function(ev) {
+				var errors = validate(form, constraints) || {};
+				showErrorsForInput(this, errors[this.name])
+			});
+		}
+		
+		function handleForSubmit(form, input) {
+			// validate against constraints
+			var errors = validate(form, constraints);
+			// and update to reflect the results
+			showErrors(form, errors || {});
+			if (!errors) {
+				showSuccess();
+			}
+		}
+		
+		function showErrors(form, errors) {
+			_.each(form.querySelectorAll("input[name], select[name]"), function(input) {
+				showErrorsForInput(input, errors && errors[input.name]);
+			});
+		}
+		
+		function showErrorsForInput(input, errors) {
+			var formGroup = closestParent(input.parentNode, "form-group")
+			, message = formGroup.querySelector(".messages");
+			resetFormGroup(formGroup);
+			if (errors) {
+				formGroup.classList.add("has-error");
+				_.each(errors, function(error) {
+					addError(messages, error);
+				});
+			} else {
+				formGroup.classList.add("has-success");
+			  }
+			}
+		
+		function closestParent(child, className) {
+			if (!child || child == document) {
+				return null;
+			}
+			if (child.classList.contains(className)) {
+				return child;
+			  } else {
+				  return closestParent(child.parentNode, className);
+			  }
+			}
+		
+		function resetFormGroup(formGroup) {
+			formGroup.classList.remove("has-error");
+			formGroup.classList.remove("has-success");
+			_.each(formGroup.querySelectorAll(".help-block.error"), function(el) {
+				el.parentNode.removeChild(el);
+			});
+		}
+		
+		function addError(messages,error) {
+			var block = document.createElement("p");
+			block.classList.add("help-block");
+			block.classList.add("error");
+			block.innerText = error;
+			messages.appendChild(block);
+		}
+		
+		function showSuccess() {
+			alert("Success!");
+		}	
+	})();
+</script>
+
 	
-
-
-
 </body>
 </html>
